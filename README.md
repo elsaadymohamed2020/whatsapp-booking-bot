@@ -1,3 +1,5 @@
+[اقرأ الدليل بالعربية](README.ar.md)
+
 # WhatsApp Booking Bot
 
 A WhatsApp chatbot backend that lets customers **book, view and cancel appointments by chatting**, with no app to install and no forms to fill in. It plugs into the official WhatsApp Cloud API, uses OpenAI to understand natural messages ("haircut tomorrow at 2pm"), and keeps the calendar consistent so two people can never get the same slot.
