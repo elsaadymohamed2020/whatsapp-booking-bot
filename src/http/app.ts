@@ -1,3 +1,4 @@
+import { DEMO_PAGE } from '../web/page';
 import express, { type Express, type Request } from 'express';
 import type { BookingBot } from '../bot';
 import type { Config } from '../config';
@@ -90,10 +91,29 @@ export function createApp({ config, bot, sender, enableDevChat }: AppDeps): Expr
   if (enableDevChat) {
     // curl -X POST localhost:3000/dev/chat -H 'content-type: application/json' \
     //   -d '{"from":"201000000000","text":"hi"}'
+    app.set('trust proxy', 1);
+    app.get('/', (_req, res) => {
+      res.type('html').send(DEMO_PAGE);
+    });
+    const hits = new Map<string, { n: number; reset: number }>();
     app.post('/dev/chat', async (req, res) => {
+      // Light protection for a public demo: 40 messages per minute per IP, 300 characters each.
+      const now = Date.now();
+      const key = req.ip ?? 'unknown';
+      const hit = hits.get(key);
+      if (!hit || hit.reset < now) hits.set(key, { n: 1, reset: now + 60_000 });
+      else if (++hit.n > 40) {
+        res.status(429).json({ error: 'too many messages' });
+        return;
+      }
+      if (hits.size > 5000) hits.clear();
       const { from, text } = (req.body ?? {}) as { from?: string; text?: string };
-      if (!from || !text) {
+      if (!from || !text || typeof from !== 'string' || typeof text !== 'string') {
         res.status(400).json({ error: 'from and text are required' });
+        return;
+      }
+      if (text.length > 300 || from.length > 64) {
+        res.status(400).json({ error: 'message too long' });
         return;
       }
       res.json({ reply: await bot.handleMessage(from, text) });
