@@ -67,11 +67,15 @@ function apply(){var t=T[lang];document.documentElement.lang=lang;document.docum
  document.getElementById('note').textContent=t.note;input.placeholder=t.ph;document.getElementById('lang').textContent=t.lang;
  chips.innerHTML='';t.chips.forEach(function(c){var b=document.createElement('button');b.type='button';b.textContent=c;b.onclick=function(){send(c);};chips.appendChild(b);});}
 var busy=false;
+function ask(id,text,ctl){
+ if(window.ELSA_LOCAL){return window.ELSA_LOCAL(id,text).then(function(reply){return {reply:reply};});}
+ return fetch('/dev/chat',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({from:id,text:text}),signal:ctl.signal})
+ .then(function(r){if(r.status===429)throw new Error('limit');if(!r.ok)throw new Error('http');return r.json();});
+}
 function send(text){text=(text||'').trim();if(!text||busy)return;busy=true;add('me',text);input.value='';
  var t=T[lang],w=add('bot typing',t.wait),ctl=new AbortController(),to=setTimeout(function(){ctl.abort();},70000);
- fetch('/dev/chat',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({from:id,text:text}),signal:ctl.signal})
- .then(function(r){if(r.status===429)throw new Error('limit');if(!r.ok)throw new Error('http');return r.json();})
- .then(function(j){w.className='msg bot';w.textContent=j.reply||'';})
+ ask(id,text,ctl)
+  .then(function(j){w.className='msg bot';w.textContent=j.reply||'';})
  .catch(function(e){w.className='msg sys';w.textContent=e.message==='limit'?t.limit:(e.name==='AbortError'?t.cold:t.err);})
  .finally(function(){clearTimeout(to);busy=false;log.scrollTop=log.scrollHeight;});}
 document.getElementById('form').onsubmit=function(e){e.preventDefault();send(input.value);};
