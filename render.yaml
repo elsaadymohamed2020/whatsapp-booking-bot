@@ -1,0 +1,27 @@
+# Render Blueprint: free web service running the Docker image. Demo mode (no WhatsApp, no database, no OpenAI).
+services:
+  - type: web
+    name: whatsapp-booking-bot
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: OPENAI_API_KEY
+        value: ""
+      - key: WHATSAPP_TOKEN
+        value: ""
+      - key: MONGODB_URI
+        value: ""
+      - key: BUSINESS_TIMEZONE
+        value: Africa/Cairo
+      # Open every day (Luxon: 1 = Monday ... 7 = Sunday)
+      - key: BUSINESS_DAYS
+        value: "1,2,3,4,5,6,7"
+      - key: BUSINESS_OPEN
+        value: "10:00"
+      - key: BUSINESS_CLOSE
+        value: "20:00"
+      # Offer start times every 30 minutes
+      - key: SLOT_STEP_MINUTES
+        value: "30"

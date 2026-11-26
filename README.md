@@ -34,6 +34,12 @@ Customers can also go step by step (service, then day, then time) by replying wi
 
 <!-- Add screenshots of a real WhatsApp conversation here: docs/screenshot-booking.png -->
 
+## Live demo (web chat)
+
+When `WHATSAPP_TOKEN` is empty the app serves a phone-style chat page at `/`, so the booking flow can be shown without a WhatsApp account. It replies in Arabic (Egyptian dialect) or English, following the language the customer writes in. The catalog is a demo salon; services and prices are examples, not real pricing.
+
+Deploy it free on Render: connect this repo and use `render.yaml` (Docker, free plan, no card). Leave `OPENAI_API_KEY`, `WHATSAPP_TOKEN` and `MONGODB_URI` empty. On the free plan the service sleeps after 15 minutes idle (the first visit takes about a minute) and bookings live in memory, so they reset on restart.
+
 ## What it does
 
 - **Booking flow over WhatsApp**: greeting, pick a service, pick a day, pick a time, confirm.
