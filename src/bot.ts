@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 import { DateTime } from 'luxon';
 import type { NluProvider } from './ai/types';
 import type { BusinessHours } from './config';
@@ -10,6 +9,14 @@ import { step, type Action, type Availability } from './domain/stateMachine';
 import type { Booking, Service, Session } from './domain/types';
 import type { Repositories } from './repositories/types';
 import { SlotTakenError } from './repositories/types';
+
+/** 6 hex characters, e.g. 32D847. Uses Web Crypto so the same code runs in Node and in a browser. */
+const bookingCode = (): string =>
+  Array.from(globalThis.crypto.getRandomValues(new Uint8Array(3)), (b) =>
+    b.toString(16).padStart(2, '0'),
+  )
+    .join('')
+    .toUpperCase();
 
 export interface BotDeps {
   repos: Repositories;
@@ -107,7 +114,7 @@ export class BookingBot {
         if (!service) return m.serviceGone;
         const start = new Date(action.start);
         const booking: Booking = {
-          code: crypto.randomBytes(3).toString('hex').toUpperCase(),
+          code: bookingCode(),
           phone,
           serviceId: service.id,
           start,
