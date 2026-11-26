@@ -18,6 +18,7 @@ const schema = z.object({
   BUSINESS_OPEN: timeOfDay.default('09:00'),
   BUSINESS_CLOSE: timeOfDay.default('17:00'),
   MIN_LEAD_MINUTES: z.coerce.number().int().min(0).default(60),
+  SLOT_STEP_MINUTES: z.coerce.number().int().min(0).default(0),
   BOOKING_HORIZON_DAYS: z.coerce.number().int().min(1).max(60).default(14),
 });
 
@@ -29,6 +30,8 @@ export interface BusinessHours {
   close: string;
   minLeadMinutes: number;
   horizonDays: number;
+  /** Gap between offered start times. 0 means back to back (the service duration). */
+  slotStepMinutes?: number;
 }
 
 export interface Config {
@@ -76,6 +79,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       close: e.BUSINESS_CLOSE,
       minLeadMinutes: e.MIN_LEAD_MINUTES,
       horizonDays: e.BOOKING_HORIZON_DAYS,
+      slotStepMinutes: e.SLOT_STEP_MINUTES,
     },
   };
 }
