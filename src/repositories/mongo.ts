@@ -36,6 +36,7 @@ const sessionSchema = new Schema<Session>(
     offeredDays: [String],
     offeredSlots: [String],
     slot: String,
+    lang: String,
     updatedAt: { type: Date, default: Date.now },
   },
   { versionKey: false },
