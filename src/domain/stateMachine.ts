@@ -1,3 +1,4 @@
+import { msgs, serviceName, servicePrice } from '../i18n';
 import type { Formatter } from './format';
 import type { Nlu, Service, Session } from './types';
 
@@ -20,19 +21,16 @@ export interface Availability {
   daysFor(serviceId: string): Promise<string[]>;
   slotsFor(serviceId: string, date: string): Promise<string[]>;
   fmt: Formatter;
+  /** Formatter used for Arabic replies. */
+  fmtAr?: Formatter;
 }
 
-const MENU = [
-  'I can help you with:',
-  '1. Book an appointment',
-  '2. See my bookings',
-  '',
-  'Just tell me what you need, for example "book a haircut tomorrow at 2pm".',
-].join('\n');
-
-const numbered = (items: string[]) => items.map((t, i) => `${i + 1}. ${t}`).join('\n');
-
-const reset = (s: Session): Session => ({ phone: s.phone, state: 'IDLE', updatedAt: s.updatedAt });
+const reset = (s: Session): Session => ({
+  phone: s.phone,
+  state: 'IDLE',
+  lang: s.lang,
+  updatedAt: s.updatedAt,
+});
 
 /**
  * Conversation flow:  IDLE -> PICK_SERVICE -> PICK_DAY -> PICK_SLOT -> CONFIRM -> IDLE
@@ -47,6 +45,9 @@ export async function step(
   now: Date = new Date(),
 ): Promise<StepResult> {
   let s: Session = { ...session, updatedAt: now };
+  const lang = s.lang ?? 'en';
+  const m = msgs(lang);
+  const fmt = lang === 'ar' && deps.fmtAr ? deps.fmtAr : deps.fmt;
 
   // Global commands work from any state.
   if (nlu.intent === 'list')
@@ -59,7 +60,7 @@ export async function step(
     };
   }
   if (nlu.intent === 'restart' || (nlu.intent === 'cancel' && s.state !== 'IDLE')) {
-    return { session: reset(s), reply: `No problem, I cleared that.\n\n${MENU}` };
+    return { session: reset(s), reply: `${m.cleared}\n\n${m.menu}` };
   }
   if (nlu.intent === 'cancel') {
     return { session: reset(s), reply: '', action: { type: 'list_bookings', cancelHint: true } };
@@ -71,8 +72,8 @@ export async function step(
       if (nlu.optionNumber === 2)
         return { session: s, reply: '', action: { type: 'list_bookings' } };
       if (nlu.optionNumber !== 1) {
-        const hello = nlu.intent === 'greet' ? 'Hi! 👋 Welcome.' : 'Sorry, I did not catch that.';
-        return { session: s, reply: `${hello}\n\n${MENU}` };
+        const hello = nlu.intent === 'greet' ? m.hello : m.didntCatch;
+        return { session: s, reply: `${hello}\n\n${m.menu}` };
       }
     }
     s = { ...s, state: 'PICK_SERVICE' };
@@ -90,7 +91,7 @@ export async function step(
       // Keep the service, let the customer choose another time.
       s = { ...s, state: 'PICK_DAY', date: undefined, slot: undefined, offeredSlots: undefined };
     } else {
-      return { session: s, reply: 'Please reply YES to confirm or NO to pick another time.' };
+      return { session: s, reply: m.replyYesNo };
     }
   }
 
@@ -116,16 +117,16 @@ export async function step(
 
   // ---- Ask for the first missing piece ----
   if (!s.serviceId) {
-    const list = numbered(
-      deps.services.map((x) => `${x.name} (${x.durationMinutes} min, ${x.price})`),
+    const list = deps.services.map((x) =>
+      m.serviceLine(serviceName(x, lang), x.durationMinutes, servicePrice(x, lang)),
     );
     const retry =
       session.state !== 'IDLE' && (byNumber || nlu.intent === 'unknown')
-        ? 'Please pick one of the options.\n\n'
+        ? `${m.pickService}\n\n`
         : '';
     return {
       session: { ...s, state: 'PICK_SERVICE' },
-      reply: `${retry}Which service would you like?\n${list}`,
+      reply: `${retry}${m.askService(list)}`,
     };
   }
 
@@ -134,16 +135,16 @@ export async function step(
     if (days.length === 0) {
       return {
         session: reset(s),
-        reply: 'Sorry, there is no availability in the coming days. Please try again later.',
+        reply: m.noAvailability,
       };
     }
     const retry =
       s.state === 'PICK_DAY' && (byNumber || nlu.intent === 'unknown')
-        ? 'Please pick one of the days.\n\n'
+        ? `${m.pickDay}\n\n`
         : '';
     return {
       session: { ...s, state: 'PICK_DAY', offeredDays: days },
-      reply: `${retry}Which day works for you?\n${numbered(days.map((d) => deps.fmt.day(d)))}`,
+      reply: `${retry}${m.askDay(days.map((d) => fmt.day(d)))}`,
     };
   }
 
@@ -152,7 +153,7 @@ export async function step(
     const days = await deps.daysFor(s.serviceId);
     return {
       session: { ...s, state: 'PICK_DAY', date: undefined, offeredDays: days },
-      reply: `Nothing is free on ${deps.fmt.day(s.date)}. Pick another day:\n${numbered(days.map((d) => deps.fmt.day(d)))}`,
+      reply: m.nothingFree(fmt.day(s.date), days.map((d) => fmt.day(d))),
     };
   }
 
@@ -164,14 +165,14 @@ export async function step(
     const service = deps.services.find((x) => x.id === s.serviceId);
     return {
       session: { ...s, state: 'CONFIRM', slot: chosen },
-      reply: `Please confirm:\n${service?.name ?? s.serviceId}, ${deps.fmt.dateTime(chosen)}\n\nReply YES to book or NO to change.`,
+      reply: m.confirm(service ? serviceName(service, lang) : s.serviceId, fmt.dateTime(chosen)),
     };
   }
 
   const retry =
-    s.state === 'PICK_SLOT' && (byNumber || nlu.time) ? 'That time is not available.\n\n' : '';
+    s.state === 'PICK_SLOT' && (byNumber || nlu.time) ? `${m.notAvailable}\n\n` : '';
   return {
     session: { ...s, state: 'PICK_SLOT', offeredSlots: slots },
-    reply: `${retry}Free times on ${deps.fmt.day(s.date)}:\n${numbered(slots.map((iso) => deps.fmt.time(iso)))}\n\nReply with a number.`,
+    reply: `${retry}${m.freeTimes(fmt.day(s.date), slots.map((iso) => fmt.time(iso)))}`,
   };
 }

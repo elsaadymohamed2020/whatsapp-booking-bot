@@ -42,11 +42,12 @@ export function generateSlots(q: SlotQuery): Date[] {
   const close = day.set({ ...parseHm(hours.close), second: 0, millisecond: 0 });
   const earliest = DateTime.fromJSDate(now).plus({ minutes: hours.minLeadMinutes });
 
+  const step = hours.slotStepMinutes || service.durationMinutes;
   const slots: Date[] = [];
   for (
     let start = open;
     start.plus({ minutes: service.durationMinutes }) <= close;
-    start = start.plus({ minutes: service.durationMinutes })
+    start = start.plus({ minutes: step })
   ) {
     const end = start.plus({ minutes: service.durationMinutes });
     if (start < earliest) continue;

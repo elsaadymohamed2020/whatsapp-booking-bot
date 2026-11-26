@@ -4,7 +4,7 @@ import { DateTime } from 'luxon';
 export function makeFormatter(timezone: string, locale = 'en') {
   return {
     day(date: string): string {
-      return DateTime.fromISO(date, { zone: timezone }).setLocale(locale).toFormat('ccc d LLL');
+      return DateTime.fromISO(date, { zone: timezone }).setLocale(locale).toFormat(locale === 'en' ? 'ccc d LLL' : 'cccc d LLLL');
     },
     time(iso: string | Date): string {
       const dt = typeof iso === 'string' ? DateTime.fromISO(iso) : DateTime.fromJSDate(iso);
@@ -12,7 +12,7 @@ export function makeFormatter(timezone: string, locale = 'en') {
     },
     dateTime(iso: string | Date): string {
       const dt = typeof iso === 'string' ? DateTime.fromISO(iso) : DateTime.fromJSDate(iso);
-      return dt.setZone(timezone).setLocale(locale).toFormat('ccc d LLL, HH:mm');
+      return dt.setZone(timezone).setLocale(locale).toFormat(locale === 'en' ? 'ccc d LLL, HH:mm' : 'cccc d LLLL، HH:mm');
     },
   };
 }

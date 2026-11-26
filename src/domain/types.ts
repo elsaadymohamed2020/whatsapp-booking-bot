@@ -1,8 +1,11 @@
 export interface Service {
   id: string;
   name: string;
+  /** Arabic display name, used when the customer writes in Arabic. */
+  nameAr?: string;
   durationMinutes: number;
   price: string;
+  priceAr?: string;
 }
 
 export type BookingStatus = 'confirmed' | 'cancelled';
@@ -34,6 +37,8 @@ export interface Session {
   offeredSlots?: string[];
   /** The slot chosen, awaiting confirmation. UTC ISO string. */
   slot?: string;
+  /** Language the customer is writing in; replies follow it. */
+  lang?: 'ar' | 'en';
   updatedAt: Date;
 }
 
